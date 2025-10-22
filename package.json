@@ -1,0 +1,41 @@
+{
+  "name": "uppcl-auto-scraper",
+  "version": "1.0.0",
+  "description": "UPPCL Power Monitoring Dashboard with Real-time Consumption Calculation",
+  "main": "dashboard_server.js",
+  "scripts": {
+    "start": "./start.sh",
+    "dashboard": "node dashboard_server.js",
+    "dashboard:start": "./start.sh",
+    "dashboard:bg": "node dashboard_server.js &",
+    "monitor": "node optimized_monitor.js",
+    "consumption": "node daily_consumption_calculator.js",
+    "consumption-today": "node daily_consumption_calculator.js today",
+    "consumption-backfill": "node daily_consumption_calculator.js backfill",
+    "consumption-history": "node daily_consumption_calculator.js history",
+    "data-quality": "node data_quality_alert.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "scraping",
+    "automation",
+    "uppcl",
+    "puppeteer",
+    "sqlite"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jimp": "^1.6.0",
+    "node-cron": "^3.0.3",
+    "puppeteer": "^24.15.0",
+    "sharp": "^0.33.5",
+    "sqlite3": "^5.1.7",
+    "tesseract.js": "^5.1.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

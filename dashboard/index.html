@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPPCL Power Monitor Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6, #06b6d4);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #94a3b8;
+            font-weight: 400;
+        }
+
+        .last-update {
+            text-align: center;
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+            padding: 0.75rem;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (min-width: 768px) {
+            .main-grid {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+
+        .grid-status-card {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .status-icon {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            box-shadow: 0 10px 25px -12px rgba(59, 130, 246, 0.5);
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+        }
+
+        .status-online {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .status-offline {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .status-unknown {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        }
+
+        .consumption-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .consumption-item {
+            background: rgba(51, 65, 85, 0.3);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            text-align: center;
+            border: 1px solid rgba(71, 85, 105, 0.5);
+        }
+
+        .consumption-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 0.25rem;
+        }
+
+        .consumption-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 500;
+        }
+
+        .today-consumption {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .today-consumption .consumption-value {
+            color: #60a5fa;
+            font-size: 2rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            font-size: 0.875rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #64748b, #475569);
+            box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 8px 20px rgba(100, 116, 139, 0.4);
+        }
+
+        .history-section {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .history-header {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .history-table-container {
+            overflow-x: auto;
+            border-radius: 1rem;
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+            background: rgba(30, 41, 59, 0.5);
+        }
+
+        .history-table th {
+            background: rgba(51, 65, 85, 0.8);
+            color: #e2e8f0;
+            font-weight: 600;
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 2px solid rgba(71, 85, 105, 0.5);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .history-table td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+            color: #cbd5e1;
+        }
+
+        .history-table tbody tr:hover {
+            background: rgba(51, 65, 85, 0.3);
+        }
+
+        .change-positive {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .change-negative {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .change-neutral {
+            color: #64748b;
+        }
+
+        /* History Filter Styles */
+        .history-filters {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(51, 65, 85, 0.3);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .filter-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .filter-row label {
+            font-weight: 600;
+            color: #cbd5e1;
+            min-width: 100px;
+        }
+
+        .filter-btn {
+            background: rgba(51, 65, 85, 0.6);
+            border: 1px solid rgba(71, 85, 105, 0.4);
+            color: #cbd5e1;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+        }
+
+        .filter-btn:hover {
+            background: rgba(71, 85, 105, 0.8);
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-color: #6366f1;
+            color: white;
+        }
+
+        .custom-range input, .custom-range select {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(71, 85, 105, 0.4);
+            color: #cbd5e1;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .custom-range input:focus, .custom-range select:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        .error {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid #ef4444;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .auto-refresh-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #10b981;
+            font-size: 0.75rem;
+            margin-left: 1rem;
+        }
+
+        .refresh-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .consumption-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                padding: 1rem;
+            }
+            
+            .history-table {
+                font-size: 0.75rem;
+            }
+            
+            .history-table th,
+            .history-table td {
+                padding: 0.75rem 0.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.75rem;
+            }
+            
+            .grid-status-card {
+                padding: 1.5rem;
+            }
+            
+            .history-table th,
+            .history-table td {
+                padding: 0.5rem 0.25rem;
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ UPPCL Power Monitor</h1>
+            <p>Real-time Grid Status & Consumption Tracking</p>
+        </div>
+
+        <div id="errorContainer"></div>
+        
+        <div class="last-update" id="lastUpdate">
+            Connecting to monitoring system...
+            <span class="auto-refresh-indicator">
+                <span class="refresh-dot"></span>
+                Auto-refresh enabled
+            </span>
+        </div>
+
+        <div class="main-grid">
+            <!-- Grid Status Card -->
+            <div class="grid-status-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="status-icon">🔌</div>
+                        Grid Power Status
+                    </div>
+                </div>
+                
+                <div class="status-indicator status-unknown" id="gridStatus">
+                    <span class="pulse">Checking...</span>
+                </div>
+
+                <div class="consumption-grid">
+                    <div class="consumption-item today-consumption" id="todayConsumption">
+                        <div class="consumption-value">--.--</div>
+                        <div class="consumption-label">Today's Usage</div>
+                    </div>
+                    
+                    <div class="consumption-item" id="currentMonthConsumption">
+                        <div class="consumption-value">--.--</div>
+                        <div class="consumption-label">This Month</div>
+                    </div>
+                    
+                    <div class="consumption-item" id="meterReading">
+                        <div class="consumption-value">--.--</div>
+                        <div class="consumption-label">Meter Reading</div>
+                    </div>
+                    
+                    <div class="consumption-item" id="accountBalance">
+                        <div class="consumption-value">--.--</div>
+                        <div class="consumption-label">Balance</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem; font-size: 0.875rem; color: #94a3b8;">
+                    <div id="lastInterruption">🔴 Last Interruption: --</div>
+                    <div id="lastRestoration">🟢 Last Restoration: --</div>
+                </div>
+            </div>
+
+            <!-- Quick Stats Card -->
+            <div class="grid-status-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        📊 Quick Stats
+                    </div>
+                </div>
+                
+                <div class="consumption-grid">
+                    <div class="consumption-item">
+                        <div class="consumption-value" id="hourlyRate">--.--</div>
+                        <div class="consumption-label">Units/Hour</div>
+                    </div>
+                    
+                    <div class="consumption-item">
+                        <div class="consumption-value" id="dailyProgress">--.--</div>
+                        <div class="consumption-label">Day Progress</div>
+                    </div>
+                    
+                    <div class="consumption-item">
+                        <div class="consumption-value" id="monthlyProgress">--.--</div>
+                        <div class="consumption-label">Month Progress</div>
+                    </div>
+                    
+                    <div class="consumption-item">
+                        <div class="consumption-value" id="dataQuality">--.--</div>
+                        <div class="consumption-label">Data Quality</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="refreshData()" id="refreshBtn">🔄 Refresh Now</button>
+            <button class="btn btn-secondary" onclick="toggleHistory()" id="historyBtn">📈 View History</button>
+        </div>
+
+        <div class="history-section" id="historySection" style="display: none;">
+            <div class="history-header">
+                📈 Historical Data & Consumption Changes
+                <span id="recordSummary" style="font-size: 0.8em; color: #64748b; margin-left: 1rem;"></span>
+            </div>
+            
+            <!-- Date/Time Range Filters -->
+            <div class="history-filters">
+                <div class="filter-row">
+                    <label>📅 Quick Filters:</label>
+                    <button class="filter-btn" onclick="setQuickFilter('5m')" id="filter5m">Last 5 min</button>
+                    <button class="filter-btn" onclick="setQuickFilter('30m')" id="filter30m">Last 30 min</button>
+                    <button class="filter-btn" onclick="setQuickFilter('1h')" id="filter1h">Last 1 hour</button>
+                    <button class="filter-btn active" onclick="setQuickFilter('24h')" id="filter24h">Last 24h</button>
+                    <button class="filter-btn" onclick="setQuickFilter('7d')" id="filter7d">Last 7 days</button>
+                    <button class="filter-btn" onclick="setQuickFilter('custom')" id="filterCustom">Custom Range</button>
+                </div>
+                
+                <div class="filter-row custom-range" id="customRange" style="display: none;">
+                    <label>🗓️ Start:</label>
+                    <input type="datetime-local" id="startDateTime" />
+                    <label>🗓️ End:</label>
+                    <input type="datetime-local" id="endDateTime" />
+                    <label>📊 Max Records:</label>
+                    <select id="recordLimit">
+                        <option value="10">10 records</option>
+                        <option value="50">50 records</option>
+                        <option value="100">100 records</option>
+                        <option value="500" selected>500 records</option>
+                        <option value="1000">1000 records</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="applyCustomFilter()">🔍 Apply</button>
+                    <button class="btn btn-secondary" onclick="setMinuteRange()">⏱️ Last Minute</button>
+                </div>
+                
+                <div class="filter-row">
+                    <label>🏷️ Data Type:</label>
+                    <select id="categoryFilter">
+                        <option value="">All Categories</option>
+                        <option value="consumption">📊 All Consumption</option>
+                        <option value="consumption_today">🌅 Today's Usage</option>
+                        <option value="consumption_month">📅 Monthly Usage</option>
+                        <option value="balance">💰 Balance</option>
+                        <option value="meter_reading">⚡ Meter Reading</option>
+                        <option value="availability">🔌 Grid Status</option>
+                        <option value="event">📅 Events</option>
+                    </select>
+                    <label>📍 Source:</label>
+                    <select id="sourceFilter">
+                        <option value="">All Sources</option>
+                        <option value="grid">🔌 Grid</option>
+                        <option value="dg">🔋 DG</option>
+                    </select>
+                    <label>🔍 Show:</label>
+                    <select id="changesOnlyFilter">
+                        <option value="">All Records</option>
+                        <option value="changes_only">📈 Changes Only</option>
+                        <option value="no_duplicates">🎯 No Duplicates</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="applyDataFilters()">Apply Filters</button>
+                </div>
+            </div>
+            
+            <div class="history-table-container">
+                <table class="history-table" id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Today's Usage</th>
+                            <th>This Month</th>
+                            <th>Meter Reading</th>
+                            <th>Grid Status</th>
+                            <th>Balance</th>
+                            <th>Balance Change</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <tr>
+                            <td colspan="7" class="loading">Loading historical data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let historyVisible = false;
+        let autoRefreshInterval = null;
+        let lastTodayUsage = null;
+        let refreshCounter = 0;
+        let currentFilter = '24h'; // Default filter
+        let currentFilterParams = { hours: 24 }; // Current filter parameters
+
+        // Utility functions
+        function formatTimestamp(timestamp) {
+            return new Date(timestamp).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function showError(message) {
+            const errorContainer = document.getElementById('errorContainer');
+            errorContainer.innerHTML = `<div class="error">❌ ${message}</div>`;
+            setTimeout(() => {
+                errorContainer.innerHTML = '';
+            }, 8000);
+        }
+
+        function updateStatus(elementId, status, className) {
+            try {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.textContent = status;
+                    element.className = `status-indicator ${className}`;
+                } else {
+                    console.warn(`Element not found: ${elementId}`);
+                }
+            } catch (error) {
+                console.error(`Error updating status for ${elementId}:`, error);
+            }
+        }
+
+        function updateConsumptionItem(elementId, value, unit, label, isSpecial = false) {
+            try {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    // Check if the element itself is the consumption-value (for Quick Stats)
+                    const isDirectValueElement = element.classList.contains('consumption-value');
+                    
+                    let valueElement, labelElement;
+                    
+                    if (isDirectValueElement) {
+                        // For Quick Stats cards - the element with ID is the value element
+                        valueElement = element;
+                        labelElement = element.parentElement?.querySelector('.consumption-label');
+                    } else {
+                        // For other cards - look for child elements
+                        valueElement = element.querySelector('.consumption-value');
+                        labelElement = element.querySelector('.consumption-label');
+                    }
+                    
+                    if (valueElement) {
+                        if (value !== null && value !== undefined) {
+                            valueElement.textContent = `${value} ${unit || ''}`.trim();
+                            if (isSpecial) {
+                                valueElement.style.color = '#60a5fa';
+                            }
+                        } else {
+                            valueElement.textContent = '--.--';
+                        }
+                    }
+                    
+                    if (label && labelElement) {
+                        labelElement.textContent = label;
+                    }
+                } else {
+                    console.warn(`Element not found: ${elementId}`);
+                }
+            } catch (error) {
+                console.error(`Error updating consumption item ${elementId}:`, error);
+            }
+        }
+
+        function calculateChange(current, previous) {
+            if (!current || !previous) return null;
+            const change = current - previous;
+            return {
+                value: change,
+                percentage: previous !== 0 ? ((change / previous) * 100).toFixed(1) : 0,
+                isPositive: change > 0,
+                isNegative: change < 0
+            };
+        }
+
+        function updateQuickStats(gridData) {
+            const now = new Date();
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const hoursElapsed = (now - startOfDay) / (1000 * 60 * 60);
+            
+            // Calculate hourly rate
+            if (gridData.todayConsumption && hoursElapsed > 0) {
+                const hourlyRate = (gridData.todayConsumption.value / hoursElapsed).toFixed(2);
+                updateConsumptionItem('hourlyRate', hourlyRate, 'U/h', 'Units/Hour');
+            } else {
+                updateConsumptionItem('hourlyRate', '--', 'U/h', 'Units/Hour');
+            }
+            
+            // Day progress
+            const dayProgress = ((hoursElapsed / 24) * 100).toFixed(0);
+            updateConsumptionItem('dailyProgress', dayProgress, '%', 'Day Progress');
+            
+            // Month progress
+            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            const dayOfMonth = now.getDate();
+            const monthProgress = ((dayOfMonth / daysInMonth) * 100).toFixed(0);
+            updateConsumptionItem('monthlyProgress', monthProgress, '%', 'Month Progress');
+            
+            // Data quality (show confidence if available)
+            const dataQuality = gridData.todayConsumption ? 
+                (gridData.todayConsumption.confidence * 100).toFixed(0) : '100';
+            updateConsumptionItem('dataQuality', dataQuality, '%', 'Data Quality');
+        }
+
+        function updateGridEvents(gridData) {
+            try {
+                const lastInterruption = document.getElementById('lastInterruption');
+                const lastRestoration = document.getElementById('lastRestoration');
+                
+                if (lastInterruption) {
+                    if (gridData.lastInterruption) {
+                        lastInterruption.innerHTML = `🔴 Last Interruption: ${formatTimestamp(gridData.lastInterruption.timestamp)}`;
+                    } else {
+                        lastInterruption.innerHTML = `🔴 Last Interruption: No recent data`;
+                    }
+                }
+                
+                if (lastRestoration) {
+                    if (gridData.lastRestoration) {
+                        lastRestoration.innerHTML = `🟢 Last Restoration: ${formatTimestamp(gridData.lastRestoration.timestamp)}`;
+                    } else {
+                        lastRestoration.innerHTML = `🟢 Last Restoration: No recent data`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating grid events:', error);
+            }
+        }
+
+        // Filter functions
+        function setQuickFilter(filterType) {
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            const buttonMap = {
+                '5m': 'filter5m',
+                '30m': 'filter30m', 
+                '1h': 'filter1h',
+                '24h': 'filter24h',
+                '7d': 'filter7d',
+                'custom': 'filterCustom'
+            };
+            document.getElementById(buttonMap[filterType]).classList.add('active');
+            
+            // Hide/show custom range
+            const customRange = document.getElementById('customRange');
+            customRange.style.display = filterType === 'custom' ? 'flex' : 'none';
+            
+            currentFilter = filterType;
+            
+            if (filterType === 'custom') {
+                // Show custom range controls and set up for custom filtering
+                console.log('📅 Switched to custom range mode');
+                // Clear any existing filter params except category/source
+                const preserveCategory = currentFilterParams.category;
+                const preserveSource = currentFilterParams.source;
+                currentFilterParams = {};
+                if (preserveCategory) currentFilterParams.category = preserveCategory;
+                if (preserveSource) currentFilterParams.source = preserveSource;
+                return;
+            }
+            
+            // Set filter parameters with appropriate limits
+            switch (filterType) {
+                case '5m':
+                    currentFilterParams = { hours: 5/60, limit: 50 }; // 5 minutes
+                    break;
+                case '30m':
+                    currentFilterParams = { hours: 0.5, limit: 200 }; // 30 minutes
+                    break;
+                case '1h':
+                    currentFilterParams = { hours: 1, limit: 400 }; // 1 hour
+                    break;
+                case '24h':
+                    currentFilterParams = { hours: 24, limit: 1000 };
+                    break;
+                case '7d':
+                    currentFilterParams = { hours: 168, limit: 2000 }; // 7 * 24 hours
+                    break;
+            }
+            
+            // Clear any custom datetime params
+            delete currentFilterParams.start_datetime;
+            delete currentFilterParams.end_datetime;
+            
+            console.log(`📅 Set quick filter: ${filterType}`, currentFilterParams);
+            
+            // Apply filter if history is visible
+            if (historyVisible) {
+                loadHistoryData();
+            }
+        }
+
+        function applyCustomFilter() {
+            const startDateTime = document.getElementById('startDateTime').value;
+            const endDateTime = document.getElementById('endDateTime').value;
+            const limit = parseInt(document.getElementById('recordLimit').value);
+            const category = document.getElementById('categoryFilter').value;
+            const source = document.getElementById('sourceFilter').value;
+            const changesFilter = document.getElementById('changesFilter').value;
+            
+            if (!startDateTime || !endDateTime) {
+                showError('Please select both start and end date/time');
+                return;
+            }
+            
+            if (new Date(startDateTime) >= new Date(endDateTime)) {
+                showError('Start date/time must be before end date/time');
+                return;
+            }
+            
+            // Convert local datetime to UTC for the API
+            const startUTC = new Date(startDateTime).toISOString();
+            const endUTC = new Date(endDateTime).toISOString();
+            
+            console.log('🕐 Custom range conversion:');
+            console.log(`  Local start: ${startDateTime} → UTC: ${startUTC}`);
+            console.log(`  Local end: ${endDateTime} → UTC: ${endUTC}`);
+            console.log(`  Record limit: ${limit}`);
+            console.log(`  Category: ${category || 'all'}`);
+            console.log(`  Source: ${source || 'all'}`);
+            console.log(`  Changes filter: ${changesFilter || 'all'}`);
+            
+            // Build filter parameters
+            currentFilterParams = {
+                start_datetime: startUTC,
+                end_datetime: endUTC,
+                limit: limit
+            };
+            
+            // Handle specific consumption filters
+            if (category === 'consumption_today') {
+                currentFilterParams.category = 'consumption';
+                currentFilterParams.period = 'today';
+            } else if (category === 'consumption_month') {
+                currentFilterParams.category = 'consumption';
+                currentFilterParams.period = 'current_month';
+            } else if (category) {
+                currentFilterParams.category = category;
+            }
+            
+            if (source) {
+                currentFilterParams.source = source;
+            }
+            
+            if (changesFilter) {
+                currentFilterParams.changes_filter = changesFilter;
+            }
+            
+            // Remove hours parameter to ensure datetime range is used
+            delete currentFilterParams.hours;
+            
+            console.log('✅ Applying custom filter with parameters:', currentFilterParams);
+            
+            if (historyVisible) {
+                loadHistoryData();
+            }
+        }
+
+        function setMinuteRange() {
+            const now = new Date();
+            const oneMinuteAgo = new Date(now.getTime() - (1 * 60 * 1000));
+            
+            // Format for datetime-local input
+            const formatForInput = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            };
+            
+            document.getElementById('startDateTime').value = formatForInput(oneMinuteAgo);
+            document.getElementById('endDateTime').value = formatForInput(now);
+            document.getElementById('recordLimit').value = '500';
+            
+            console.log('⏱️ Set to last minute range:', {
+                start: formatForInput(oneMinuteAgo),
+                end: formatForInput(now)
+            });
+            
+            // Auto-apply the filter
+            applyCustomFilter();
+        }
+
+        function applyDataFilters() {
+            const category = document.getElementById('categoryFilter').value;
+            const source = document.getElementById('sourceFilter').value;
+            const changesOnly = document.getElementById('changesOnlyFilter').value;
+            
+            // Add category and source to current filter params
+            if (category) {
+                currentFilterParams.category = category;
+            } else {
+                delete currentFilterParams.category;
+            }
+            
+            if (source) {
+                currentFilterParams.source = source;
+            } else {
+                delete currentFilterParams.source;
+            }
+            
+            if (changesOnly) {
+                currentFilterParams.changes_filter = changesOnly;
+            } else {
+                delete currentFilterParams.changes_filter;
+            }
+            
+            console.log('Applying data type filters:', { category, source, changesOnly });
+            console.log('Updated filter params:', currentFilterParams);
+            
+            if (historyVisible) {
+                loadHistoryData();
+            }
+        }
+
+        // Initialize filter dates to reasonable defaults
+        function initializeFilterDates() {
+            const now = new Date();
+            const yesterday = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+            
+            // Format for datetime-local input (browser's local timezone)
+            const formatForInput = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            };
+            
+            document.getElementById('endDateTime').value = formatForInput(now);
+            document.getElementById('startDateTime').value = formatForInput(yesterday);
+            
+            console.log('🗓️ Initialized filter dates:');
+            console.log(`  Start (local): ${formatForInput(yesterday)}`);
+            console.log(`  End (local): ${formatForInput(now)}`);
+            console.log(`  Browser timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`);
+        }
+
+        // API functions
+        async function fetchStatus() {
+            try {
+                console.log('Fetching from /api/status...');
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                
+                const response = await fetch('/api/status', {
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Status data parsed successfully');
+                return data;
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    throw new Error('Request timed out - server may be unresponsive');
+                }
+                console.error('Fetch status error:', error);
+                throw new Error(`Failed to fetch status: ${error.message}`);
+            }
+        }
+
+        async function fetchHistory() {
+            try {
+                console.log('Fetching from /api/history with params:', currentFilterParams);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                
+                // Build query parameters
+                const params = new URLSearchParams();
+                Object.keys(currentFilterParams).forEach(key => {
+                    if (currentFilterParams[key] !== undefined && currentFilterParams[key] !== null) {
+                        params.append(key, currentFilterParams[key]);
+                    }
+                });
+                
+                const response = await fetch(`/api/history?${params.toString()}`, {
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('History data parsed successfully');
+                return data;
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    throw new Error('Request timed out - server may be unresponsive');
+                }
+                console.error('Fetch history error:', error);
+                throw new Error(`Failed to fetch history: ${error.message}`);
+            }
+        }
+
+        // Main functions
+        async function refreshData() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            if (!refreshBtn) {
+                console.error('Refresh button not found');
+                return;
+            }
+            
+            const wasDisabled = refreshBtn.disabled;
+            
+            if (!wasDisabled) {
+                refreshBtn.disabled = true;
+                refreshBtn.textContent = '🔄 Refreshing...';
+            }
+            
+            refreshCounter++;
+
+            try {
+                console.log('Fetching status data...');
+                const status = await fetchStatus();
+                console.log('Status data received:', status);
+                
+                // Check if we have grid data
+                if (!status || !status.grid) {
+                    throw new Error('Invalid status data received');
+                }
+                
+                // Update Grid status
+                const gridStatusClass = status.grid.status === 'online' ? 'status-online' : 
+                                      status.grid.status === 'offline' ? 'status-offline' : 'status-unknown';
+                updateStatus('gridStatus', status.grid.status.toUpperCase(), gridStatusClass);
+                
+                // Update consumption items
+                if (status.grid.todayConsumption) {
+                    updateConsumptionItem('todayConsumption', 
+                        status.grid.todayConsumption.value.toFixed(2), 
+                        status.grid.todayConsumption.unit, 
+                        'Today\'s Usage ⚡ Calculated', true);
+                    lastTodayUsage = status.grid.todayConsumption.value;
+                } else {
+                    updateConsumptionItem('todayConsumption', null, 'UNITS', 'Today\'s Usage');
+                }
+                
+                // Update other consumption data
+                updateConsumptionItem('currentMonthConsumption', 
+                    status.grid.consumption, 
+                    status.grid.unit, 
+                    'This Month');
+                
+                if (status.grid.meterReading) {
+                    updateConsumptionItem('meterReading', 
+                        status.grid.meterReading.value.toLocaleString(), 
+                        status.grid.meterReading.unit, 
+                        'Meter Reading');
+                }
+                
+                if (status.grid.balance) {
+                    const balanceColor = status.grid.balance.value >= 0 ? '#10b981' : '#ef4444';
+                    updateConsumptionItem('accountBalance', 
+                        `Rs. ${status.grid.balance.value.toLocaleString()}`, 
+                        '', 
+                        'Balance');
+                    const balanceElement = document.querySelector('#accountBalance .consumption-value');
+                    if (balanceElement) {
+                        balanceElement.style.color = balanceColor;
+                    }
+                }
+
+                // Update grid events
+                updateGridEvents(status.grid);
+                
+                // Update quick stats
+                updateQuickStats(status.grid);
+
+                // Update timestamp with refresh counter
+                const now = new Date();
+                document.getElementById('lastUpdate').innerHTML = `
+                    Last updated: ${formatTimestamp(status.timestamp)} (Refresh #${refreshCounter})
+                    <span class="auto-refresh-indicator">
+                        <span class="refresh-dot"></span>
+                        Auto-refresh enabled
+                    </span>
+                `;
+
+                // If history is visible, refresh it too
+                if (historyVisible) {
+                    console.log('🔄 Refreshing historical data...');
+                    await loadHistoryData();
+                }
+
+            } catch (error) {
+                showError(error.message);
+                console.error('Refresh error:', error);
+            } finally {
+                if (!wasDisabled) {
+                    refreshBtn.disabled = false;
+                    refreshBtn.textContent = '🔄 Refresh Now';
+                }
+            }
+        }
+
+        async function toggleHistory() {
+            const historySection = document.getElementById('historySection');
+            const historyBtn = document.getElementById('historyBtn');
+            
+            if (!historyVisible) {
+                historySection.style.display = 'block';
+                historyBtn.textContent = '📈 Hide History';
+                historyVisible = true;
+                
+                // Initialize filter dates and load data
+                initializeFilterDates();
+                await loadHistoryData();
+            } else {
+                historySection.style.display = 'none';
+                historyBtn.textContent = '📈 View History';
+                historyVisible = false;
+            }
+        }
+
+        async function loadHistoryData() {
+            const tableBody = document.getElementById('historyTableBody');
+            tableBody.innerHTML = '<tr><td colspan="7" class="loading">Loading historical data...</td></tr>';
+            
+            try {
+                const history = await fetchHistory();
+                displayHistoryTable(history);
+            } catch (error) {
+                tableBody.innerHTML = 
+                    `<tr><td colspan="7" class="error">Failed to load history: ${error.message}</td></tr>`;
+            }
+        }
+
+        function displayHistoryTable(history) {
+            const tableBody = document.getElementById('historyTableBody');
+            const recordSummary = document.getElementById('recordSummary');
+            
+            if (history.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="7" class="loading">No historical data available.</td></tr>';
+                recordSummary.textContent = '(0 records)';
+                return;
+            }
+
+            // Count records by category for summary
+            const categoryCount = {};
+            history.forEach(record => {
+                categoryCount[record.category] = (categoryCount[record.category] || 0) + 1;
+            });
+            
+            const changesFilter = currentFilterParams.changes_filter;
+            let filterNote = '';
+            if (changesFilter === 'changes_only') {
+                filterNote = ' - Changes Only 📈';
+            } else if (changesFilter === 'no_duplicates') {
+                filterNote = ' - No Duplicates 🎯';
+            }
+            
+            const summaryText = `(${history.length} records: ${Object.entries(categoryCount).map(([cat, count]) => `${count} ${cat}`).join(', ')})${filterNote}`;
+            recordSummary.textContent = summaryText;
+
+            // Group data by timestamp to create rows
+            const groupedData = {};
+            
+            history.forEach(record => {
+                const timestamp = record.timestamp.substring(0, 16); // Group by minute
+                if (!groupedData[timestamp]) {
+                    groupedData[timestamp] = {
+                        timestamp: record.timestamp,
+                        todayUsage: null,
+                        currentMonth: null,
+                        availability: null,
+                        totalReading: null,
+                        balance: null
+                    };
+                }
+                
+                const row = groupedData[timestamp];
+                
+                // Map data to appropriate columns
+                if (record.category === 'consumption') {
+                    if (record.period === 'today') {
+                        row.todayUsage = record.consumption_value;
+                    } else if (record.period === 'current_month') {
+                        row.currentMonth = `${record.consumption_value} ${record.consumption_unit}`;
+                    }
+                } else if (record.category === 'availability') {
+                    row.availability = record.status;
+                } else if (record.category === 'meter_reading') {
+                    row.totalReading = `${record.consumption_value.toLocaleString()} ${record.consumption_unit}`;
+                } else if (record.category === 'balance') {
+                    row.balance = `Rs. ${record.consumption_value.toLocaleString()}`;
+                }
+            });
+
+            // Sort by timestamp (newest first)
+            const sortedRows = Object.values(groupedData).sort((a, b) => 
+                new Date(b.timestamp) - new Date(a.timestamp)
+            );
+
+            // Carry forward last known availability status for better UX
+            let lastKnownAvailability = 'online'; // Default assumption
+            sortedRows.forEach(row => {
+                if (row.availability) {
+                    lastKnownAvailability = row.availability;
+                } else {
+                    row.availability = lastKnownAvailability;
+                }
+            });
+
+            // Calculate balance changes - show change only for the row where balance actually changed
+            // Display all fetched records (no UI limit)
+            const tableRows = sortedRows.map((row, index) => {
+                let balanceChangeCell = '--';
+                
+                // Calculate balance change compared to the immediate previous row
+                if (row.balance) {
+                    const currentBalance = parseFloat(row.balance.replace(/^Rs\.\s*/g, '').replace(/,/g, ''));
+                    
+                    // Get the immediate previous row
+                    const previousRow = sortedRows[index + 1];
+                    if (previousRow && previousRow.balance) {
+                        const previousBalance = parseFloat(previousRow.balance.replace(/^Rs\.\s*/g, '').replace(/,/g, ''));
+                        
+                        // Only show change if there's a meaningful difference (more than 10 paise)
+                        const balanceChange = currentBalance - previousBalance;
+                        if (Math.abs(balanceChange) > 0.1) {
+                            if (balanceChange > 0) {
+                                // Money was added (recharge/top-up)
+                                balanceChangeCell = `<span class="change-positive">+Rs. ${balanceChange.toFixed(2)}</span>`;
+                            } else {
+                                // Money was deducted (consumption charges)
+                                balanceChangeCell = `<span class="change-negative">-Rs. ${Math.abs(balanceChange).toFixed(2)}</span>`;
+                            }
+                        } else {
+                            // No significant change
+                            balanceChangeCell = '--';
+                        }
+                    }
+                }
+
+                return `
+                    <tr>
+                        <td>${formatTimestamp(row.timestamp)}</td>
+                        <td style="color: #60a5fa; font-weight: 600">${row.todayUsage ? row.todayUsage.toFixed(2) + ' UNITS' : '--'}</td>
+                        <td style="color: #94a3b8">${row.currentMonth || '--'}</td>
+                        <td style="color: #cbd5e1">${row.totalReading || '--'}</td>
+                        <td><span class="availability-${row.availability}" style="color: ${row.availability === 'online' ? '#10b981' : row.availability === 'offline' ? '#ef4444' : '#f59e0b'}">${row.availability.toUpperCase()}</span></td>
+                        <td style="color: ${row.balance && row.balance.includes('-') ? '#ef4444' : '#10b981'}">${row.balance || '--'}</td>
+                        <td>${balanceChangeCell}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            tableBody.innerHTML = tableRows;
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Dashboard initialized');
+            
+            refreshData();
+            
+            // Set up auto-refresh every 30 seconds for more responsive updates
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            autoRefreshInterval = setInterval(() => {
+                console.log('🔄 Auto-refreshing data...');
+                refreshData();
+            }, 30000);
+            
+            console.log('✅ Auto-refresh enabled (30 seconds)');
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>
