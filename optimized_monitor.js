@@ -7,6 +7,7 @@ const path = require('path');
 const crypto = require('crypto');
 const cron = require('node-cron');
 const DailyConsumptionCalculator = require('./daily_consumption_calculator');
+const CaptchaSolver = require('./captcha_solver');
 
 /**
  * Optimized UPPCL Power Monitor
@@ -16,19 +17,28 @@ const DailyConsumptionCalculator = require('./daily_consumption_calculator');
 class UppclPowerMonitor {
   constructor() {
     this.config = {
-      url: 'https://uppclmp.myxenius.com/AppAMR',
+      url: process.env.WEBAPP_URL || 'https://uppclmp.myxenius.com/AppAMR',
       username: process.env.USERNAME || '',
       password: process.env.PASSWORD || '',
       headless: process.env.HEADLESS !== 'false',
       dbPath: path.join(__dirname, 'power_data.db'),
       cookiesPath: path.join(__dirname, 'cookies.json'),
-      schedulePattern: '* * * * *' // Every 1 minute
+      schedulePattern: process.env.CHECK_INTERVAL_CRON || '* * * * *', // Every 1 minute
+      autoSolveCaptcha: process.env.AUTO_SOLVE_CAPTCHA === 'true',
+      captchaDebug: process.env.CAPTCHA_DEBUG === 'true'
     };
     
     this.browser = null;
     this.page = null;
     this.db = null;
     this.dailyCalculator = new DailyConsumptionCalculator(this.config.dbPath);
+    
+    // Initialize captcha solver if enabled
+    if (this.config.autoSolveCaptcha) {
+      this.captchaSolver = new CaptchaSolver({
+        debug: this.config.captchaDebug
+      });
+    }
   }
 
   // Initialize database
@@ -117,11 +127,37 @@ class UppclPowerMonitor {
       await this.page.type('input[name="username"], input[type="email"]', this.config.username);
       await this.page.type('input[name="password"], input[type="password"]', this.config.password);
       
-      // Handle CAPTCHA if present (simplified)
+      // Handle CAPTCHA if present
       const captchaField = await this.page.$('input[name*="captcha" i]');
       if (captchaField) {
-        console.log('⚠️ CAPTCHA detected - manual intervention may be required');
-        // Here you could integrate your existing CAPTCHA solver
+        console.log('🔍 CAPTCHA detected - attempting to solve...');
+        
+        if (this.config.autoSolveCaptcha && this.captchaSolver) {
+          try {
+            // Initialize captcha solver if not already done
+            await this.captchaSolver.initialize();
+            
+            // Try to solve the captcha
+            const captchaResult = await this.captchaSolver.solveCaptcha(this.page);
+            
+            if (captchaResult && captchaResult.success) {
+              console.log(`✅ CAPTCHA solved (${captchaResult.type}): ${captchaResult.text}`);
+              
+              // Enter the captcha solution
+              await captchaField.clear();
+              await captchaField.type(captchaResult.text);
+            } else {
+              console.log('❌ Failed to solve CAPTCHA automatically');
+              return false;
+            }
+          } catch (captchaError) {
+            console.error('❌ CAPTCHA solving error:', captchaError.message);
+            return false;
+          }
+        } else {
+          console.log('⚠️ CAPTCHA detected but auto-solve is disabled');
+          return false;
+        }
       }
 
       // Submit login

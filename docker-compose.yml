@@ -10,9 +10,20 @@ services:
       - ./data:/usr/src/app/data
       - ./backups:/usr/src/app/backups
       - ./power_data.db:/usr/src/app/power_data.db
+      - ./cookies.json:/usr/src/app/cookies.json
     environment:
       - NODE_ENV=production
       - PORT=3000
+      # UPPCL Configuration (copy from your .env file)
+      - WEBAPP_URL=https://uppclmp.myxenius.com/AppAMR
+      - USERNAME=${USERNAME}
+      - PASSWORD=${PASSWORD}
+      - HEADLESS=true
+      # Captcha Configuration  
+      - AUTO_SOLVE_CAPTCHA=true
+      - CAPTCHA_DEBUG=false
+      # Monitoring Schedule
+      - CHECK_INTERVAL_CRON=*/15 * * * *
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
