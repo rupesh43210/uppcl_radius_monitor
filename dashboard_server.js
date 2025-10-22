@@ -155,10 +155,12 @@ class PowerDashboard {
           changesFilter
         });
         
-        // Filter out old scraped "today" consumption data
-        history = history.filter(record => {
-          return !(record.category === 'consumption' && record.period === 'today');
-        });
+        // Filter out old scraped "today" consumption data ONLY if not specifically requesting today's data
+        if (!(category === 'consumption' && period === 'today')) {
+          history = history.filter(record => {
+            return !(record.category === 'consumption' && record.period === 'today');
+          });
+        }
         
         // Apply changes-only filtering if requested
         if (changesFilter === 'changes_only') {

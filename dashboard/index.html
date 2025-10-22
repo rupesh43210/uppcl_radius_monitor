@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -590,7 +591,7 @@
                         <option value="dg">🔋 DG</option>
                     </select>
                     <label>🔍 Show:</label>
-                    <select id="changesOnlyFilter">
+                    <select id="changesFilter">
                         <option value="">All Records</option>
                         <option value="changes_only">📈 Changes Only</option>
                         <option value="no_duplicates">🎯 No Duplicates</option>
@@ -869,23 +870,40 @@
                 limit: limit
             };
             
-            // Handle specific consumption filters
+            // Handle changes filter first (always pass to backend)
+            if (changesFilter) {
+                currentFilterParams.changes_filter = changesFilter;
+            }
+            
+            // Handle specific consumption and other filters with frontend filtering
             if (category === 'consumption_today') {
-                currentFilterParams.category = 'consumption';
-                currentFilterParams.period = 'today';
+                // Use frontend filtering for today's consumption
+                currentFilterParams.frontend_filter = 'consumption_today';
             } else if (category === 'consumption_month') {
+                // Use frontend filtering for monthly consumption
+                currentFilterParams.frontend_filter = 'consumption_month';
+            } else if (category === 'consumption') {
+                // Backend filter for all consumption
                 currentFilterParams.category = 'consumption';
-                currentFilterParams.period = 'current_month';
+            } else if (category === 'balance') {
+                // Use frontend filtering for balance
+                currentFilterParams.frontend_filter = 'balance';
+            } else if (category === 'meter_reading') {
+                // Use frontend filtering for meter reading
+                currentFilterParams.frontend_filter = 'meter_reading';
+            } else if (category === 'availability') {
+                // Use frontend filtering for availability
+                currentFilterParams.frontend_filter = 'availability';
+            } else if (category === 'event') {
+                // Use frontend filtering for events
+                currentFilterParams.frontend_filter = 'event';
             } else if (category) {
+                // Backend filter for other categories
                 currentFilterParams.category = category;
             }
             
             if (source) {
                 currentFilterParams.source = source;
-            }
-            
-            if (changesFilter) {
-                currentFilterParams.changes_filter = changesFilter;
             }
             
             // Remove hours parameter to ensure datetime range is used
@@ -928,31 +946,88 @@
         function applyDataFilters() {
             const category = document.getElementById('categoryFilter').value;
             const source = document.getElementById('sourceFilter').value;
-            const changesOnly = document.getElementById('changesOnlyFilter').value;
+            const changesOnly = document.getElementById('changesFilter').value;
             
-            // Add category and source to current filter params
-            if (category) {
-                currentFilterParams.category = category;
+            console.log('🔍 Applying data filters:', { category, source, changesOnly });
+            
+            // IMPORTANT: Always pass changes_filter to backend regardless of frontend filtering
+            if (changesOnly) {
+                currentFilterParams.changes_filter = changesOnly;
+                console.log('📊 Applied changes filter:', changesOnly);
             } else {
+                delete currentFilterParams.changes_filter;
+                console.log('📊 Cleared changes filter');
+            }
+            
+            // Handle different filter types with smart frontend filtering
+            if (category === 'consumption_today') {
+                // Get all data, but filter frontend to show timestamps with today's consumption
                 delete currentFilterParams.category;
+                delete currentFilterParams.period;
+                currentFilterParams.frontend_filter = 'consumption_today';
+                console.log('📊 Applied frontend today consumption filter');
+            } else if (category === 'consumption_month') {
+                // Get all data, but filter frontend to show timestamps with monthly consumption
+                delete currentFilterParams.category;
+                delete currentFilterParams.period;
+                currentFilterParams.frontend_filter = 'consumption_month';
+                console.log('📊 Applied frontend monthly consumption filter');
+            } else if (category === 'consumption') {
+                // Show all consumption data (backend filter)
+                currentFilterParams.category = 'consumption';
+                delete currentFilterParams.period;
+                delete currentFilterParams.frontend_filter;
+                console.log('📊 Applied all consumption filter');
+            } else if (category === 'balance') {
+                // Get all data, but filter frontend to show timestamps with balance changes
+                delete currentFilterParams.category;
+                delete currentFilterParams.period;
+                currentFilterParams.frontend_filter = 'balance';
+                console.log('📊 Applied frontend balance filter');
+            } else if (category === 'meter_reading') {
+                // Get all data, but filter frontend to show timestamps with meter readings
+                delete currentFilterParams.category;
+                delete currentFilterParams.period;
+                currentFilterParams.frontend_filter = 'meter_reading';
+                console.log('📊 Applied frontend meter reading filter');
+            } else if (category === 'availability') {
+                // Get all data, but filter frontend to show timestamps with availability changes
+                delete currentFilterParams.category;
+                delete currentFilterParams.period;
+                currentFilterParams.frontend_filter = 'availability';
+                console.log('📊 Applied frontend availability filter');
+            } else if (category === 'event') {
+                // Events might not exist yet, but prepare for future use
+                delete currentFilterParams.category;
+                delete currentFilterParams.period;
+                currentFilterParams.frontend_filter = 'event';
+                console.log('📊 Applied frontend event filter');
+            } else if (category) {
+                // For any other category, use backend filtering
+                currentFilterParams.category = category;
+                delete currentFilterParams.period;
+                delete currentFilterParams.frontend_filter;
+                console.log('📊 Applied backend category filter:', category);
+            } else {
+                // No category filter - show all data
+                delete currentFilterParams.category;
+                delete currentFilterParams.period;
+                delete currentFilterParams.frontend_filter;
+                console.log('📊 Cleared all category filters');
             }
             
             if (source) {
                 currentFilterParams.source = source;
+                console.log('📊 Applied source filter:', source);
             } else {
                 delete currentFilterParams.source;
+                console.log('📊 Cleared source filter');
             }
             
-            if (changesOnly) {
-                currentFilterParams.changes_filter = changesOnly;
-            } else {
-                delete currentFilterParams.changes_filter;
-            }
-            
-            console.log('Applying data type filters:', { category, source, changesOnly });
-            console.log('Updated filter params:', currentFilterParams);
+            console.log('✅ Final filter params:', currentFilterParams);
             
             if (historyVisible) {
+                console.log('🔄 Reloading history with new filters...');
                 loadHistoryData();
             }
         }
@@ -1189,33 +1264,145 @@
             const tableBody = document.getElementById('historyTableBody');
             const recordSummary = document.getElementById('recordSummary');
             
+            console.log('🔍 Displaying history table with', history.length, 'records');
+            console.log('Frontend filter:', currentFilterParams.frontend_filter);
+            
             if (history.length === 0) {
                 tableBody.innerHTML = '<tr><td colspan="7" class="loading">No historical data available.</td></tr>';
                 recordSummary.textContent = '(0 records)';
                 return;
             }
 
+            // Apply frontend filtering if specified
+            let filteredHistory = history;
+            let filterNote = '';
+            
+            if (currentFilterParams.frontend_filter === 'consumption_today') {
+                // Show only timestamps that have today's consumption data
+                const todayTimestamps = new Set();
+                history.forEach(record => {
+                    if (record.category === 'consumption' && record.period === 'today') {
+                        todayTimestamps.add(record.timestamp.substring(0, 16));
+                    }
+                });
+                
+                filteredHistory = history.filter(record => {
+                    const recordMinute = record.timestamp.substring(0, 16);
+                    return todayTimestamps.has(recordMinute);
+                });
+                
+                filterNote = ' - Today\'s Usage Focus 🌅';
+                console.log('🌅 Frontend filtered to today\'s consumption timestamps:', filteredHistory.length, 'records');
+                
+            } else if (currentFilterParams.frontend_filter === 'consumption_month') {
+                // Show only timestamps that have monthly consumption data
+                const monthTimestamps = new Set();
+                history.forEach(record => {
+                    if (record.category === 'consumption' && (record.period === 'current_month' || record.period === 'previous_month')) {
+                        monthTimestamps.add(record.timestamp.substring(0, 16));
+                    }
+                });
+                
+                filteredHistory = history.filter(record => {
+                    const recordMinute = record.timestamp.substring(0, 16);
+                    return monthTimestamps.has(recordMinute);
+                });
+                
+                filterNote = ' - Monthly Usage Focus 📅';
+                console.log('📅 Frontend filtered to monthly consumption timestamps:', filteredHistory.length, 'records');
+                
+            } else if (currentFilterParams.frontend_filter === 'balance') {
+                // Show only timestamps that have balance data
+                const balanceTimestamps = new Set();
+                history.forEach(record => {
+                    if (record.category === 'balance') {
+                        balanceTimestamps.add(record.timestamp.substring(0, 16));
+                    }
+                });
+                
+                filteredHistory = history.filter(record => {
+                    const recordMinute = record.timestamp.substring(0, 16);
+                    return balanceTimestamps.has(recordMinute);
+                });
+                
+                filterNote = ' - Balance Focus 💰';
+                console.log('💰 Frontend filtered to balance timestamps:', filteredHistory.length, 'records');
+                
+            } else if (currentFilterParams.frontend_filter === 'meter_reading') {
+                // Show only timestamps that have meter reading data
+                const meterTimestamps = new Set();
+                history.forEach(record => {
+                    if (record.category === 'meter_reading') {
+                        meterTimestamps.add(record.timestamp.substring(0, 16));
+                    }
+                });
+                
+                filteredHistory = history.filter(record => {
+                    const recordMinute = record.timestamp.substring(0, 16);
+                    return meterTimestamps.has(recordMinute);
+                });
+                
+                filterNote = ' - Meter Reading Focus ⚡';
+                console.log('⚡ Frontend filtered to meter reading timestamps:', filteredHistory.length, 'records');
+                
+            } else if (currentFilterParams.frontend_filter === 'availability') {
+                // Show only timestamps that have availability/status changes
+                const availabilityTimestamps = new Set();
+                history.forEach(record => {
+                    if (record.category === 'availability') {
+                        availabilityTimestamps.add(record.timestamp.substring(0, 16));
+                    }
+                });
+                
+                filteredHistory = history.filter(record => {
+                    const recordMinute = record.timestamp.substring(0, 16);
+                    return availabilityTimestamps.has(recordMinute);
+                });
+                
+                filterNote = ' - Grid Status Focus 🔌';
+                console.log('🔌 Frontend filtered to availability timestamps:', filteredHistory.length, 'records');
+                
+            } else if (currentFilterParams.frontend_filter === 'event') {
+                // Show only timestamps that have event data (for future use)
+                const eventTimestamps = new Set();
+                history.forEach(record => {
+                    if (record.category === 'event') {
+                        eventTimestamps.add(record.timestamp.substring(0, 16));
+                    }
+                });
+                
+                filteredHistory = history.filter(record => {
+                    const recordMinute = record.timestamp.substring(0, 16);
+                    return eventTimestamps.has(recordMinute);
+                });
+                
+                filterNote = ' - Events Focus 📅';
+                console.log('📅 Frontend filtered to event timestamps:', filteredHistory.length, 'records');
+            }
+
             // Count records by category for summary
             const categoryCount = {};
-            history.forEach(record => {
-                categoryCount[record.category] = (categoryCount[record.category] || 0) + 1;
+            filteredHistory.forEach(record => {
+                const key = record.period ? `${record.category}_${record.period}` : record.category;
+                categoryCount[key] = (categoryCount[key] || 0) + 1;
             });
             
+            console.log('📊 Data by category:', categoryCount);
+            
             const changesFilter = currentFilterParams.changes_filter;
-            let filterNote = '';
             if (changesFilter === 'changes_only') {
-                filterNote = ' - Changes Only 📈';
+                filterNote += ' - Changes Only 📈';
             } else if (changesFilter === 'no_duplicates') {
-                filterNote = ' - No Duplicates 🎯';
+                filterNote += ' - No Duplicates 🎯';
             }
             
-            const summaryText = `(${history.length} records: ${Object.entries(categoryCount).map(([cat, count]) => `${count} ${cat}`).join(', ')})${filterNote}`;
+            const summaryText = `(${filteredHistory.length} records: ${Object.entries(categoryCount).map(([cat, count]) => `${count} ${cat}`).join(', ')})${filterNote}`;
             recordSummary.textContent = summaryText;
 
             // Group data by timestamp to create rows
             const groupedData = {};
             
-            history.forEach(record => {
+            filteredHistory.forEach(record => {
                 const timestamp = record.timestamp.substring(0, 16); // Group by minute
                 if (!groupedData[timestamp]) {
                     groupedData[timestamp] = {
@@ -1234,8 +1421,10 @@
                 if (record.category === 'consumption') {
                     if (record.period === 'today') {
                         row.todayUsage = record.consumption_value;
+                        console.log('📅 Found today usage:', record.consumption_value, 'at', timestamp);
                     } else if (record.period === 'current_month') {
                         row.currentMonth = `${record.consumption_value} ${record.consumption_unit}`;
+                        console.log('📅 Found monthly usage:', record.consumption_value, record.consumption_unit);
                     }
                 } else if (record.category === 'availability') {
                     row.availability = record.status;
@@ -1246,20 +1435,30 @@
                 }
             });
 
+            console.log('🔢 Grouped data sample:', Object.keys(groupedData).slice(0, 3).map(key => ({
+                timestamp: key,
+                data: groupedData[key]
+            })));
+
             // Sort by timestamp (newest first)
             const sortedRows = Object.values(groupedData).sort((a, b) => 
                 new Date(b.timestamp) - new Date(a.timestamp)
             );
 
-            // Carry forward last known availability status for better UX
-            let lastKnownAvailability = 'online'; // Default assumption
-            sortedRows.forEach(row => {
-                if (row.availability) {
-                    lastKnownAvailability = row.availability;
-                } else {
-                    row.availability = lastKnownAvailability;
-                }
-            });
+            // Show only actual values recorded at each specific timestamp
+            // No filling of missing values - show exactly what was recorded when
+            console.log('📋 Showing exact timestamp values without filling:', sortedRows.slice(0, 3).map(row => ({
+                timestamp: row.timestamp,
+                todayUsage: row.todayUsage,
+                currentMonth: row.currentMonth,
+                availability: row.availability,
+                totalReading: row.totalReading,
+                balance: row.balance
+            })));
+
+            // Optional: Add a note to help users understand what they're seeing
+            console.log('ℹ️ Values shown are exactly what was recorded at each timestamp');
+            console.log('ℹ️ Empty values mean no data was recorded for that metric at that specific time');
 
             // Calculate balance changes - show change only for the row where balance actually changed
             // Display all fetched records (no UI limit)
@@ -1292,14 +1491,41 @@
                     }
                 }
 
+                // Determine row highlighting based on filter type
+                let rowHighlight = '';
+                let todayHighlight = '';
+                let monthHighlight = '';
+                let balanceHighlight = '';
+                let meterHighlight = '';
+                let availabilityHighlight = '';
+                
+                if (currentFilterParams.frontend_filter === 'consumption_today' && row.todayUsage !== null) {
+                    rowHighlight = ' style="background-color: rgba(96, 165, 250, 0.1); border-left: 3px solid #60a5fa;"';
+                    todayHighlight = '; background-color: rgba(96, 165, 250, 0.2); font-weight: 700;';
+                } else if (currentFilterParams.frontend_filter === 'consumption_month' && row.currentMonth) {
+                    rowHighlight = ' style="background-color: rgba(148, 163, 184, 0.1); border-left: 3px solid #94a3b8;"';
+                    monthHighlight = '; background-color: rgba(148, 163, 184, 0.2); font-weight: 700;';
+                } else if (currentFilterParams.frontend_filter === 'balance' && row.balance) {
+                    rowHighlight = ' style="background-color: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981;"';
+                    balanceHighlight = '; background-color: rgba(16, 185, 129, 0.2); font-weight: 700;';
+                } else if (currentFilterParams.frontend_filter === 'meter_reading' && row.totalReading) {
+                    rowHighlight = ' style="background-color: rgba(203, 213, 225, 0.1); border-left: 3px solid #cbd5e1;"';
+                    meterHighlight = '; background-color: rgba(203, 213, 225, 0.2); font-weight: 700;';
+                } else if (currentFilterParams.frontend_filter === 'availability' && row.availability) {
+                    const availabilityColor = row.availability === 'online' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+                    const borderColor = row.availability === 'online' ? '#10b981' : '#ef4444';
+                    rowHighlight = ` style="background-color: ${availabilityColor}; border-left: 3px solid ${borderColor};"`;
+                    availabilityHighlight = '; background-color: rgba(59, 130, 246, 0.2); font-weight: 700;';
+                }
+
                 return `
-                    <tr>
+                    <tr${rowHighlight}>
                         <td>${formatTimestamp(row.timestamp)}</td>
-                        <td style="color: #60a5fa; font-weight: 600">${row.todayUsage ? row.todayUsage.toFixed(2) + ' UNITS' : '--'}</td>
-                        <td style="color: #94a3b8">${row.currentMonth || '--'}</td>
-                        <td style="color: #cbd5e1">${row.totalReading || '--'}</td>
-                        <td><span class="availability-${row.availability}" style="color: ${row.availability === 'online' ? '#10b981' : row.availability === 'offline' ? '#ef4444' : '#f59e0b'}">${row.availability.toUpperCase()}</span></td>
-                        <td style="color: ${row.balance && row.balance.includes('-') ? '#ef4444' : '#10b981'}">${row.balance || '--'}</td>
+                        <td style="color: #60a5fa; font-weight: 600${todayHighlight}">${row.todayUsage !== null ? row.todayUsage.toFixed(2) + ' UNITS' : '<span style="color: #64748b; font-style: italic;">--</span>'}</td>
+                        <td style="color: #94a3b8${monthHighlight}">${row.currentMonth || '<span style="color: #64748b; font-style: italic;">--</span>'}</td>
+                        <td style="color: #cbd5e1${meterHighlight}">${row.totalReading || '<span style="color: #64748b; font-style: italic;">--</span>'}</td>
+                        <td style="${availabilityHighlight}"><span class="availability-${row.availability || 'unknown'}" style="color: ${row.availability === 'online' ? '#10b981' : row.availability === 'offline' ? '#ef4444' : '#64748b'}">${row.availability ? row.availability.toUpperCase() : '<span style="font-style: italic;">N/A</span>'}</span></td>
+                        <td style="color: ${row.balance && row.balance.includes('-') ? '#ef4444' : '#10b981'}${balanceHighlight}">${row.balance || '<span style="color: #64748b; font-style: italic;">--</span>'}</td>
                         <td>${balanceChangeCell}</td>
                     </tr>
                 `;
